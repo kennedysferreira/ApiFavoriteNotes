@@ -1,36 +1,30 @@
 const AppError = require("../utils/appError");
 const sqliteConnection = require("../database/sqlite");
 const { hash, compare } = require("bcryptjs");
+const UserRepositories = require("../repositories/userRepositories");
+const UserCreateServices = require("../services/userCreateServices");
 
 class UserController {
   async create(req, res) {
     const { name, email, password } = req.body;
-    const database = await sqliteConnection();
-    const checkUserExist = await database.get(
-      "SELECT * FROM users WHERE email = (?)",
-      [email]
-    );
 
-    if (checkUserExist) {
-      throw new AppError("Este email ja existe");
-    }
+    const userRepositories = new UserRepositories();
+    const userCreateServices = new UserCreateServices(userRepositories);
 
-    const hashedPassword = await hash(password, 8);
-
-    await database.run(
-      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-      [name, email, hashedPassword]
-    );
+    await userCreateServices.execute({ name, email, password });
+    
 
     return res.status(201).json();
   }
 
   async update(req, res) {
     const { name, email, password, old_password } = req.body;
-    const user_id = req.user.id
+    const user_id = req.user.id;
 
     const database = await sqliteConnection();
-    const user = await database.get("SELECT * FROM users WHERE id = (?)", [user_id]);
+    const user = await database.get("SELECT * FROM users WHERE id = (?)", [
+      user_id,
+    ]);
 
     if (!user) {
       throw new AppError("User not exists");
